@@ -1,0 +1,141 @@
+/* TefReadingExample.css */
+.tef-reading-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px auto;
+    border: 2px solid #ccc;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  .navbar-placeholder {
+    height: 60px;
+    width: 100%;
+    background-color: #f0f0f0;
+  }
+  
+  .content-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: calc(100% - 60px);
+    align-items: stretch;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  
+  .left-side {
+    flex: 1;
+    width: 50%;
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border-right: 2px solid #ccc;
+    overflow: hidden;
+  }
+  
+  .example-image {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .right-side {
+    flex: 1;
+    width: 50%;
+    padding: 0px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 20px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background-color: #f9f9f9;
+    height: 100%;
+  }
+  
+  .scroll-container {
+    overflow-y: auto;
+    width: 100%;
+    height: calc(100% - 20px);
+    background: #e6e6e6;
+    padding: 0px;
+    border-top: 1px solid #ccc;
+    margin-top: 0px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+  
+  .audio-group {
+    margin-bottom: 30px;
+    padding: 15px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .audio-example {
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  .expand-button {
+    padding: 8px 16px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .expand-button:hover {
+    background-color: #5a6268;
+  }
+  
+  .suggestions-toggle {
+    margin-top: 10px;
+  }
+
+  .suggestions {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f1f1f1;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .suggestions li {
+    margin-bottom: 5px;
+  }
