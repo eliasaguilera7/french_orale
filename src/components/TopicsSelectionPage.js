@@ -14,25 +14,7 @@ const TopicsSelectionPage = () => {
     { title: 'School Conversation', image: '/images/school.png', path: '/tef-reading/school' },
     { title: 'Hotel Reservation', image: '/images/hotel.png', path: '/tef-reading/hotel' },
     { title: 'Bank Inquiry', image: '/images/bank.png', path: '/tef-reading/bank' },
-    { title: 'Doctor Appointment', image: '/images/doctor.png', path: '/tef-reading/doctor' },
-    { title: 'Car Rental', image: '/images/car.png', path: '/tef-reading/car' },
-    { title: 'Library Visit', image: '/images/library.png', path: '/tef-reading/library' },
-    { title: 'Cinema Ticket', image: '/images/cinema.png', path: '/tef-reading/cinema' },
-    { title: 'Flight Booking', image: '/images/flight.png', path: '/tef-reading/flight' },
-    { title: 'Gym Registration', image: '/images/gym.png', path: '/tef-reading/gym' },
-    { title: 'Post Office', image: '/images/post.png', path: '/tef-reading/post' },
-    { title: 'Police Report', image: '/images/police.png', path: '/tef-reading/police' },
-    { title: 'Apartment Rental', image: '/images/apartment.png', path: '/tef-reading/apartment' },
-    { title: 'Supermarket Visit', image: '/images/supermarket.png', path: '/tef-reading/supermarket' },
-    { title: 'University Admission', image: '/images/university.png', path: '/tef-reading/university' },
-    { title: 'Park Visit', image: '/images/park.png', path: '/tef-reading/park' },
-    { title: 'Festival Celebration', image: '/images/festival.png', path: '/tef-reading/festival' },
-    { title: 'Wedding Preparation', image: '/images/wedding.png', path: '/tef-reading/wedding' },
-    { title: 'Beach Outing', image: '/images/beach.png', path: '/tef-reading/beach' },
-    { title: 'Concert Experience', image: '/images/concert.png', path: '/tef-reading/concert' },
-
   ];
-  
 
   return (
     <div className="topics-container">
@@ -44,7 +26,9 @@ const TopicsSelectionPage = () => {
             className="topic-card"
             onClick={() => navigate(topic.path)}
           >
-            <img src={topic.image} alt={topic.title} className="topic-image" />
+            <div className="image-container">
+              <img src={topic.image} alt={topic.title} className="topic-image" />
+            </div>
             <h3>{topic.title}</h3>
           </div>
         ))}

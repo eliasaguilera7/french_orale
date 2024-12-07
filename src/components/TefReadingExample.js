@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './TefReadingExample.css';
+import restaurant from '../topics/topics_oral/restaurant'; // Adjust the path as necessary
 
 const TefReadingExample = () => {
   const audioFiles = [
@@ -14,17 +15,20 @@ const TefReadingExample = () => {
     'assets/audio/yoga_conversation/example3/audio3.mp3',
   ];
   const [isRecording, setIsRecording] = useState(false);
-  const [recordings, setRecordings] = useState([[], [], []]);
+  const [recordings, setRecordings] = useState(restaurant.groups.map(group => group.examples.map(() => null)));
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [currentGroup, setCurrentGroup] = useState(null);
-  const [showSuggestions, setShowSuggestions] = useState([false, false, false]);
+  const [currentExample, setCurrentExample] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(restaurant.groups.map(() => false));
   const audioRefs = useRef(audioFiles.map(() => null));
+  const fullConversationAudioRef = useRef(null);
+  const [fullConversationProgress, setFullConversationProgress] = useState(0);
 
-  const handlePlayAudio = (index) => {
-    audioRefs.current[index]?.play();
+  const handlePlayAudio = (audioIndex) => {
+    audioRefs.current[audioIndex]?.play();
   };
 
-  const handleStartRecording = async (groupIndex) => {
+  const handleStartRecording = async (groupIndex, exampleIndex) => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -32,7 +36,7 @@ const TefReadingExample = () => {
         setMediaRecorder(recorder);
         setIsRecording(true);
         setCurrentGroup(groupIndex);
-        recorder.start();
+        setCurrentExample(exampleIndex);
 
         const chunks = [];
         recorder.ondataavailable = (event) => {
@@ -40,25 +44,44 @@ const TefReadingExample = () => {
         };
 
         recorder.onstop = () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/mpeg' });
+          const audioBlob = new Blob(chunks, { type: 'audio/webm; codecs=opus' });
           const url = URL.createObjectURL(audioBlob);
+
           setRecordings((prevRecordings) => {
-            const newRecordings = [...prevRecordings];
-            newRecordings[groupIndex] = [...newRecordings[groupIndex], url];
+            const newRecordings = prevRecordings.map((groupRecordings, gIndex) => {
+              if (gIndex === groupIndex) {
+                return groupRecordings.map((rec, eIndex) => {
+                  if (eIndex === exampleIndex) {
+                    return url; // Override with the latest recording
+                  } else {
+                    return rec;
+                  }
+                });
+              } else {
+                return groupRecordings;
+              }
+            });
             return newRecordings;
           });
         };
+
+        recorder.start();
       } catch (error) {
-        console.error('Error accessing audio devices.', error);
+        console.error('Error accessing audio devices:', error);
+        alert('Unable to access the microphone. Please check your browser settings.');
       }
+    } else {
+      alert('MediaDevices API not supported in this browser.');
     }
   };
 
   const handleStopRecording = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
+      setMediaRecorder(null);
       setIsRecording(false);
       setCurrentGroup(null);
+      setCurrentExample(null);
     }
   };
 
@@ -70,99 +93,142 @@ const TefReadingExample = () => {
     });
   };
 
-  useEffect(() => {
-    // Cleanup recordings on session close
-    const cleanupRecordings = () => {
-      recordings.flat().forEach((url) => URL.revokeObjectURL(url));
-    };
-    window.addEventListener('beforeunload', cleanupRecordings);
+  // Commented out the cleanup useEffect hook
+  // useEffect(() => {
+  //   // Cleanup recordings on session close
+  //   const cleanupRecordings = () => {
+  //     recordings.flat().forEach((url) => URL.revokeObjectURL(url));
+  //   };
+  //   window.addEventListener('beforeunload', cleanupRecordings);
 
-    return () => {
-      cleanupRecordings();
-      window.removeEventListener('beforeunload', cleanupRecordings);
-    };
-  }, [recordings]);
+  //   return () => {
+  //     cleanupRecordings();
+  //     window.removeEventListener('beforeunload', cleanupRecordings);
+  //   };
+  // }, [recordings]);
+
+  const handleFullConversationPlay = () => {
+    if (fullConversationAudioRef.current) {
+      fullConversationAudioRef.current.play();
+    }
+  };
+
+  const handleFullConversationTimeUpdate = () => {
+    if (fullConversationAudioRef.current) {
+      const progress = (fullConversationAudioRef.current.currentTime / fullConversationAudioRef.current.duration) * 100;
+      setFullConversationProgress(progress);
+    }
+  };
+
+  let audioIndex = 0;
 
   return (
-    <div className="tef-reading-container">
-      <div className="navbar-placeholder"></div>
-      <div className="content-container">
-        <div className="left-side">
-          <img src="/yoga_image_1.png" alt="Examples" className="example-image" />
-          <div className="play-all-container"></div>
-        </div>
+    <div>
+      <div className="tef-reading-container">
+        <div className="navbar-placeholder"></div>
+        <div className="content-container">
+          <div className="left-side">
+            <img src="/yoga_image_1.png" alt="Examples" className="example-image" />
+            <div className="play-all-container"></div>
+          </div>
 
-        <div className="right-side">
-          <div className="scroll-container">
-            {[...Array(3)].map((_, groupIndex) => (
-              <div key={groupIndex} className="audio-group">
-                <h3>Group {groupIndex + 1}</h3>
+          <div className="right-side">
+            <div className="scroll-container">
+              {restaurant.groups.map((group, groupIndex) => (
+                group.examples.map((example, exampleIndex) => {
+                  const currentAudioIndex = audioIndex++;
+                  return (
+                    <div key={`${groupIndex}-${exampleIndex}`} className="audio-group">
+                      <h3>{group.instruction}</h3>
 
-                {/* Your Response Section */}
-                <div className="audio-example">
-                  <h3>Your Response</h3>
-                  {!isRecording && (
-                    <button onClick={() => handleStartRecording(groupIndex)}>
-                      Record
-                    </button>
-                  )}
-                  {isRecording && currentGroup === groupIndex && (
-                    <button onClick={handleStopRecording}>Stop Recording</button>
-                  )}
-                  {recordings[groupIndex].map((url, index) => (
-                    <div key={index}>
-                      <p>Recording {index + 1}</p>
-                      <audio src={url} controls style={{ width: '100%' }} />
-                      <button onClick={() => new Audio(url).play()}>
-                        <i className="fas fa-play"></i>
-                      </button>
+                      {/* Your Response Section */}
+                      <div className="audio-response">
+                        
+                        {!isRecording && (
+                          <button onClick={() => handleStartRecording(groupIndex, exampleIndex)}>Record</button>
+                        )}
+                        {isRecording && currentGroup === groupIndex && currentExample === exampleIndex && (
+                          <button onClick={handleStopRecording} style={{ backgroundColor: 'red' }}>
+                            Stop Recording
+                          </button>
+                        )}
+                        {recordings[groupIndex][exampleIndex] && (
+                          <div>
+                            <p></p>
+                            <audio
+                              key={recordings[groupIndex][exampleIndex]}
+                              src={recordings[groupIndex][exampleIndex]}
+                              controls
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Example Section */}
+                     {/*} <div className="audio-example">
+                        <div className="example-item">
+                          <p><strong>Q:</strong> {example.question}</p>
+                          <p><strong>A:</strong> {example.answer}</p>
+                        </div>
+                        <button onClick={() => handlePlayAudio(currentAudioIndex)}>Play</button>
+                        <audio
+                          ref={(el) => (audioRefs.current[currentAudioIndex] = el)}
+                          src={audioFiles[currentAudioIndex]}
+                        />
+                      </div>*/}
+
+                      {/* Suggestions Section */}
+                      <div className="suggestions-toggle">
+                        <button onClick={() => toggleSuggestions(groupIndex)}>
+                          {showSuggestions[groupIndex] ? 'Hide' : 'Show Suggestions'}
+                          <span className={`arrow ${showSuggestions[groupIndex] ? 'open' : ''}`}>&#9654;</span>
+                        </button>
+                      </div>
+                      {showSuggestions[groupIndex] && (
+                        <div className="suggestions">
+                          <h4>Alternative Questions</h4>
+                          <ul>
+                            {group.showSuggestion.alternativeQuestions.reserverTable.map((question, index) => (
+                              <li key={index}>{question}</li>
+                            ))}
+                            {group.showSuggestion.alternativeQuestions.menuOptions.map((question, index) => (
+                              <li key={index}>{question}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-
-                {/* Example Section */}
-                <div className="audio-example">
-                  <h3>Example</h3>
-                  <button onClick={() => handlePlayAudio(groupIndex)}>Play</button>
-                  <audio
-                    ref={(el) => (audioRefs.current[groupIndex] = el)}
-                    src={audioFiles[groupIndex]}
-                  />
-                </div>
-
-                <div className="suggestions-toggle">
-                  <button onClick={() => toggleSuggestions(groupIndex)}>
-                    {showSuggestions[groupIndex]
-                      ? 'Hide Suggestions'
-                      : 'Show Suggestions'}
-                  </button>
-                  {showSuggestions[groupIndex] && (
-                    <div className="suggestions">
-                      <div>
-                        a. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Praesent eget nisl eu arcu gravida tristique nec sed purus.
-                        Fusce non nunc in turpis hendrerit venenatis at non nulla.
-                      </div>
-                      &nbsp;
-                      <div>
-                        b. Vestibulum ante ipsum primis in faucibus orci luctus et.
-                        Morbi feugiat velit vel libero posuere, eget aliquet felis
-                        venenatis. Cras dignissim mi nec elit sollicitudin, non
-                        feugiat velit.
-                      </div>
-                      &nbsp;
-                      <div>
-                        c. Curabitur non nulla sit amet nisl tempus convallis quis ac.
-                        Quisque nec arcu in dolor elementum tristique id nec lorem.
-                        Ut faucibus velit vitae justo sollicitudin, a aliquam libero.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                  );
+                })
+              ))}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Full Conversation Section */}
+      <div className="full-conversation">
+        <h3>
+          Full Conversation (Ready to Use):
+          <button onClick={handleFullConversationPlay} style={{ marginLeft: '10px' }}>
+            Play
+          </button>
+        </h3>
+        <audio
+          ref={fullConversationAudioRef}
+          src="/assets/audio/full_conversation.mp3"
+          onTimeUpdate={handleFullConversationTimeUpdate}
+        />
+        <div className="progress-bar">
+          <div className="progress" style={{ width: `${fullConversationProgress}%` }}></div>
+        </div>
+        {restaurant.groups[0].fullConversation.map((line, index) => (
+          <div key={index}>
+            <p><strong>Q:</strong> {line.question}</p>
+            <p><strong>A:</strong> {line.answer}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
