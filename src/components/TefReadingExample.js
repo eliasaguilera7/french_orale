@@ -1,6 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './TefReadingExample.css';
-import restaurant from '../topics/topics_oral/restaurant'; // Adjust the path as necessary
+import topicsOrale from '../topics/topics_oral/topicsOrale';
+
+// Importing Material UI Pagination components
+import Pagination from '@mui/material/Pagination';
+import PaginationItem from '@mui/material/PaginationItem';
+import Stack from '@mui/material/Stack';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const TefReadingExample = () => {
   const audioFiles = [
@@ -14,29 +21,37 @@ const TefReadingExample = () => {
     'assets/audio/yoga_conversation/example3/audio2.mp3',
     'assets/audio/yoga_conversation/example3/audio3.mp3',
   ];
+
   const [isRecording, setIsRecording] = useState(false);
-  const [recordings, setRecordings] = useState(restaurant.groups.map(group => group.examples.map(() => null)));
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [currentGroup, setCurrentGroup] = useState(null);
-  const [currentExample, setCurrentExample] = useState(null);
-  const [showSuggestions, setShowSuggestions] = useState(restaurant.groups.map(() => false));
+
+  const currentTopic = topicsOrale[0];
+  const stepsCount = Object.keys(currentTopic.instructions).length;
+
+  const [recordings, setRecordings] = useState(Array(stepsCount).fill(null));
+
   const audioRefs = useRef(audioFiles.map(() => null));
   const fullConversationAudioRef = useRef(null);
   const [fullConversationProgress, setFullConversationProgress] = useState(0);
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const instructionKey = `step${currentStep}`;
+  const currentInstruction = currentTopic.instructions[instructionKey];
+  const currentSuggestions = currentTopic.suggestions[instructionKey];
+
+  const [showCurrentSuggestions, setShowCurrentSuggestions] = useState(false);
 
   const handlePlayAudio = (audioIndex) => {
     audioRefs.current[audioIndex]?.play();
   };
 
-  const handleStartRecording = async (groupIndex, exampleIndex) => {
+  const handleStartRecording = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
         setMediaRecorder(recorder);
         setIsRecording(true);
-        setCurrentGroup(groupIndex);
-        setCurrentExample(exampleIndex);
 
         const chunks = [];
         recorder.ondataavailable = (event) => {
@@ -46,21 +61,9 @@ const TefReadingExample = () => {
         recorder.onstop = () => {
           const audioBlob = new Blob(chunks, { type: 'audio/webm; codecs=opus' });
           const url = URL.createObjectURL(audioBlob);
-
           setRecordings((prevRecordings) => {
-            const newRecordings = prevRecordings.map((groupRecordings, gIndex) => {
-              if (gIndex === groupIndex) {
-                return groupRecordings.map((rec, eIndex) => {
-                  if (eIndex === exampleIndex) {
-                    return url; // Override with the latest recording
-                  } else {
-                    return rec;
-                  }
-                });
-              } else {
-                return groupRecordings;
-              }
-            });
+            const newRecordings = [...prevRecordings];
+            newRecordings[currentStep - 1] = url;
             return newRecordings;
           });
         };
@@ -80,32 +83,9 @@ const TefReadingExample = () => {
       mediaRecorder.stop();
       setMediaRecorder(null);
       setIsRecording(false);
-      setCurrentGroup(null);
-      setCurrentExample(null);
     }
   };
-
-  const toggleSuggestions = (groupIndex) => {
-    setShowSuggestions((prevShowSuggestions) => {
-      const newShowSuggestions = [...prevShowSuggestions];
-      newShowSuggestions[groupIndex] = !newShowSuggestions[groupIndex];
-      return newShowSuggestions;
-    });
-  };
-
-  // Commented out the cleanup useEffect hook
-  // useEffect(() => {
-  //   // Cleanup recordings on session close
-  //   const cleanupRecordings = () => {
-  //     recordings.flat().forEach((url) => URL.revokeObjectURL(url));
-  //   };
-  //   window.addEventListener('beforeunload', cleanupRecordings);
-
-  //   return () => {
-  //     cleanupRecordings();
-  //     window.removeEventListener('beforeunload', cleanupRecordings);
-  //   };
-  // }, [recordings]);
+  
 
   const handleFullConversationPlay = () => {
     if (fullConversationAudioRef.current) {
@@ -120,7 +100,37 @@ const TefReadingExample = () => {
     }
   };
 
-  let audioIndex = 0;
+  const lines = currentTopic.conversation.split('\n').map(line => line.trim()).filter(l => l);
+  const fullConversation = [];
+  for (let i = 0; i < lines.length; i += 2) {
+    const studentLine = lines[i]?.replace(/^Student:\s*/, '');
+    const advertiserLine = lines[i + 1]?.replace(/^Advertiser:\s*/, '');
+    if (studentLine && advertiserLine) {
+      fullConversation.push({ question: studentLine, answer: advertiserLine });
+    }
+  }
+
+  // Handle page changes from the MUI pagination
+  const handlePageChange = (event, value) => {
+    // reset suggestions toggle
+    setShowCurrentSuggestions(false);
+    setCurrentStep(value);
+  };
+
+  const handleNext = () => {
+    if (currentStep < stepsCount) {
+      setShowCurrentSuggestions(false); // Fix: Updated to setShowCurrentSuggestions
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+  
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setShowCurrentSuggestions(false); // Fix: Updated to setShowCurrentSuggestions
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
+ 
 
   return (
     <div>
@@ -134,81 +144,93 @@ const TefReadingExample = () => {
 
           <div className="right-side">
             <div className="scroll-container">
-              {restaurant.groups.map((group, groupIndex) => (
-                group.examples.map((example, exampleIndex) => {
-                  const currentAudioIndex = audioIndex++;
-                  return (
-                    <div key={`${groupIndex}-${exampleIndex}`} className="audio-group">
-                      <h3>{group.instruction}</h3>
 
-                      {/* Your Response Section */}
-                      <div className="audio-response">
-                        
-                        {!isRecording && (
-                          <button onClick={() => handleStartRecording(groupIndex, exampleIndex)}>Record</button>
-                        )}
-                        {isRecording && currentGroup === groupIndex && currentExample === exampleIndex && (
-                          <button onClick={handleStopRecording} style={{ backgroundColor: 'red' }}>
-                            Stop Recording
-                          </button>
-                        )}
-                        {recordings[groupIndex][exampleIndex] && (
-                          <div>
-                            <p></p>
-                            <audio
-                              key={recordings[groupIndex][exampleIndex]}
-                              src={recordings[groupIndex][exampleIndex]}
-                              controls
-                              style={{ width: '100%' }}
-                            />
-                          </div>
-                        )}
-                      </div>
+            <div className="navigation-buttons">
+  <button
+    onClick={handlePrevious}
+    disabled={currentStep === 1}
+    className={`nav-button ${
+      currentStep === 1 ? "disabled" : ""
+    }`}
+  >
+    Previous
+  </button>
+  <button
+    onClick={handleNext}
+    disabled={currentStep === stepsCount}
+    className={`nav-button ${
+      currentStep === stepsCount ? "disabled" : ""
+    }`}
+  >
+    Next
+  </button>
+</div>
+              <h3>{currentInstruction}</h3>
 
-                      {/* Example Section */}
-                     {/*} <div className="audio-example">
-                        <div className="example-item">
-                          <p><strong>Q:</strong> {example.question}</p>
-                          <p><strong>A:</strong> {example.answer}</p>
-                        </div>
-                        <button onClick={() => handlePlayAudio(currentAudioIndex)}>Play</button>
-                        <audio
-                          ref={(el) => (audioRefs.current[currentAudioIndex] = el)}
-                          src={audioFiles[currentAudioIndex]}
-                        />
-                      </div>*/}
+              <div style={{ margin: '10px 0' }}></div>
+              <div>
+  <button onClick={() => setShowCurrentSuggestions(!showCurrentSuggestions)}>
+    {showCurrentSuggestions ? 'Hide Suggestions' : 'Show Suggestions'}
+  </button>
+  {showCurrentSuggestions && currentSuggestions && (
+    <div className="suggestions" style={{ marginTop: '10px' }}>
+      <h4>Suggestions for {instructionKey}</h4>
+      <ul>
+        {currentSuggestions.map((suggestion, index) => (
+          <li key={index}>{suggestion}</li>
+        ))}
+      </ul>
+    </div>
+  )}
+</div>
 
-                      {/* Suggestions Section */}
-                      <div className="suggestions-toggle">
-                        <button onClick={() => toggleSuggestions(groupIndex)}>
-                          {showSuggestions[groupIndex] ? 'Hide' : 'Show Suggestions'}
-                          <span className={`arrow ${showSuggestions[groupIndex] ? 'open' : ''}`}>&#9654;</span>
-                        </button>
-                      </div>
-                      {showSuggestions[groupIndex] && (
-                        <div className="suggestions">
-                          <h4>Alternative Questions</h4>
-                          <ul>
-                            {group.showSuggestion.alternativeQuestions.reserverTable.map((question, index) => (
-                              <li key={index}>{question}</li>
-                            ))}
-                            {group.showSuggestion.alternativeQuestions.menuOptions.map((question, index) => (
-                              <li key={index}>{question}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              ))}
+<div className="audio-response">
+  <button
+    onClick={handleStartRecording}
+    disabled={isRecording}
+    style={{ marginBottom: "10px" }}
+  >
+    {isRecording ? "Recording in Progress..." : "Record Your Response"}
+  </button>
+  {isRecording && (
+    <button
+      onClick={handleStopRecording}
+      style={{
+        backgroundColor: "red",
+        color: "white",
+        marginBottom: "10px",
+      }}
+    >
+      Stop Recording
+    </button>
+  )}
+  {recordings[currentStep - 1] && (
+    <div style={{ marginTop: "10px" }}>
+
+      <audio
+        key={recordings[currentStep - 1]}
+        src={recordings[currentStep - 1]}
+        controls
+        style={{ width: "100%" }}
+      />
+    </div>
+  )}
+</div>
+
+
+
+
+
+
+
+
             </div>
           </div>
         </div>
       </div>
 
       {/* Full Conversation Section */}
-      <div className="full-conversation">
+      <div className="full-conversation" style={{ marginTop: '20px' }}>
         <h3>
           Full Conversation (Ready to Use):
           <button onClick={handleFullConversationPlay} style={{ marginLeft: '10px' }}>
@@ -220,13 +242,13 @@ const TefReadingExample = () => {
           src="/assets/audio/full_conversation.mp3"
           onTimeUpdate={handleFullConversationTimeUpdate}
         />
-        <div className="progress-bar">
-          <div className="progress" style={{ width: `${fullConversationProgress}%` }}></div>
+        <div className="progress-bar" style={{ margin: '10px 0' }}>
+          <div className="progress" style={{ width: `${fullConversationProgress}%`, height: '5px', background: 'blue' }}></div>
         </div>
-        {restaurant.groups[0].fullConversation.map((line, index) => (
+        {fullConversation.map((line, index) => (
           <div key={index}>
-            <p><strong>Q:</strong> {line.question}</p>
-            <p><strong>A:</strong> {line.answer}</p>
+            <p><strong>student:</strong> {line.question}</p>
+            <p><strong>Avertiser:</strong> {line.answer}</p>
           </div>
         ))}
       </div>
